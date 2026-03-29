@@ -1,0 +1,61 @@
+import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import 'dotenv/config';
+import connectDB from './config/db.js';
+import authRoutes from './routes/authRoutes.js';
+import quizRoutes from './routes/quizRoutes.js';
+import attemptRoutes from './routes/attemptRoutes.js';
+import roundRoutes from './routes/roundRoutes.js';
+import questionRoutes from './routes/questionRoutes.js';
+
+const app = express();
+const port = process.env.PORT || 4000
+
+
+const allowedOrigins = [
+  'http://localhost:5173'
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log("Blocked by CORS:", origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+};
+
+
+
+app.use(express.json());
+app.use(cookieParser());
+app.use(cors(corsOptions));
+connectDB();
+
+
+app.get('/', (req,res) => {
+    res.status(200).send("API WORKING");
+})
+
+
+app.use('/api/auth', authRoutes);
+app.use('/api/quizzes', quizRoutes);
+app.use('/api/attempts', attemptRoutes);
+app.use('/api/rounds', roundRoutes);
+app.use('/api/questions', questionRoutes);
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: err.message || 'Internal Server Error' });
+});
+
+
+
+
+
+app.listen(port, () => {
+  console.log(`Server running on http://localhost:${port}`);
+});
