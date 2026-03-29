@@ -15,7 +15,7 @@ const port = process.env.PORT || 4000
 
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://ziuq-client.vercel.app/'
+  'https://ziuq-client.vercel.app'
 ];
 
 const corsOptions = {
