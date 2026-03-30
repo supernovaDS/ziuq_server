@@ -3,11 +3,11 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import 'dotenv/config';
 import connectDB from './config/db.js';
-import authRoutes from './routes/authRoutes.js';
-import quizRoutes from './routes/quizRoutes.js';
-import attemptRoutes from './routes/attemptRoutes.js';
-import roundRoutes from './routes/roundRoutes.js';
-import questionRoutes from './routes/questionRoutes.js';
+import authRoutes from './routes/auth.routes.js';
+import quizRoutes from './routes/quiz.routes.js';
+import attemptRoutes from './routes/attempt.routes.js';
+import roundRoutes from './routes/round.routes.js';
+import questionRoutes from './routes/question.routes.js';
 
 const app = express();
 const port = process.env.PORT || 4000

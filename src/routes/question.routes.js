@@ -1,9 +1,9 @@
 import express from 'express';
 import { createQuestion, getRoundQuestions, updateQuestion, 
-  deleteQuestion } from '../controllers/questionController.js';
+  deleteQuestion } from '../controllers/question.controller.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import upload from '../config/cloudinary.js';
-import { submitAnswer, finishRound } from '../controllers/submissionController.js';
+import { submitAnswer, finishRound } from '../controllers/submission.controller.js';
 
 
 const router = express.Router();

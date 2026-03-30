@@ -11,15 +11,15 @@ export const register = async (req, res) => {
     const { username, firstName, lastName, email, password } = req.body;
 
     // 1. Check if email or username already exists
-    const existingUser = await User.findOne({ 
-      $or: [{ email: email.toLowerCase() }, { username }] 
+    const existingUser = await User.findOne({
+      $or: [{ email: email.toLowerCase() }, { username }]
     });
 
     if (existingUser) {
-      return res.status(400).json({ 
-        message: existingUser.email === email.toLowerCase() 
-          ? "Email already registered" 
-          : "Username already taken" 
+      return res.status(400).json({
+        message: existingUser.email === email.toLowerCase()
+          ? "Email already registered"
+          : "Username already taken"
       });
     }
 
@@ -36,11 +36,19 @@ export const register = async (req, res) => {
       password: hashedPassword
     });
 
+    const token = generateToken(user._id);
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
     res.status(201).json({
       message: "User registered successfully",
-      token: generateToken(user._id),
       user: {
-        id: user._id, // This is your 'userid'
+        id: user._id,
         username: user.username,
         firstName: user.firstName,
         lastName: user.lastName,
@@ -65,16 +73,24 @@ export const login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: "Invalid email or password" });
 
+    const token = generateToken(user._id);
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
     res.json({
       message: "Login successful",
-      token: generateToken(user._id),
-      user: { 
-        id: user._id, 
+      user: {
+        id: user._id,
         username: user.username,
-        firstName: user.firstName, 
+        firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        stats: user.stats // Added this so the UI can show their score immediately
+        stats: user.stats
       }
     });
   } catch (error) {
@@ -82,11 +98,20 @@ export const login = async (req, res) => {
   }
 };
 
+export const logout = (req, res) => {
+  res.cookie("token", "", {
+    httpOnly: true,
+    expires: new Date(0),
+  });
+
+  res.status(200).json({ message: "Logged out successfully" });
+};
+
 export const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
     if (!user) return res.status(404).json({ message: "User not found" });
-    
+
     res.status(200).json(user);
   } catch (error) {
     res.status(500).json({ error: error.message });

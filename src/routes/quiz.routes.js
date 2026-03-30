@@ -1,5 +1,5 @@
 import express from 'express';
-import { createQuiz, getAllQuizzes, getMyQuizzes, updateQuiz, deleteQuiz } from '../controllers/quizController.js';
+import { createQuiz, getAllQuizzes, getMyQuizzes, updateQuiz, deleteQuiz } from '../controllers/quiz.controller.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import upload from '../config/cloudinary.js';
 

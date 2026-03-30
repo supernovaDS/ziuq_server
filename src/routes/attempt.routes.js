@@ -1,5 +1,5 @@
 import express from 'express';
-import { getMyHistory, getQuizLeaderboard, recordAttempt } from '../controllers/attemptController.js';
+import { getMyHistory, getQuizLeaderboard, recordAttempt } from '../controllers/attempt.controller.js';
 import { protect } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
