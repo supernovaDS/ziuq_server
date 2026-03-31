@@ -1,6 +1,5 @@
 import express from 'express';
-import { createRound, getQuizRounds, updateRound, 
-  deleteRound } from '../controllers/round.controller.js';
+import { createRound, getQuizRounds, updateRound, deleteRound } from '../controllers/round.controller.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import upload from '../config/cloudinary.js';
 
