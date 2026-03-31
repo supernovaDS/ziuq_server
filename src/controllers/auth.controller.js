@@ -153,11 +153,10 @@ export const googleAuth = async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    // 🔥 COOKIE SET
     res.cookie("token", appToken, {
       httpOnly: true,
-      secure: false, // true in production (https)
-      sameSite: "Lax",
+      secure: true,
+      sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
