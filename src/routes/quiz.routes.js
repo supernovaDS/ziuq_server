@@ -1,5 +1,5 @@
 import express from 'express';
-import { createQuiz, getAllQuizzes, getMyQuizzes, updateQuiz, deleteQuiz } from '../controllers/quiz.controller.js';
+import { createQuiz, getAllQuizzes, getMyQuizzes, updateQuiz, deleteQuiz, getQuiz } from '../controllers/quiz.controller.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import upload from '../config/cloudinary.js';
 
@@ -10,6 +10,8 @@ router.get('/', getAllQuizzes);
 
 // My Quizzes (only logged-in user)
 router.get('/my', protect, getMyQuizzes);
+
+router.get('/:id', protect, getQuiz);
 
 // Create Quiz
 router.post('/', protect, upload.single('banner'), createQuiz);

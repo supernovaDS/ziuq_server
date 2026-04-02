@@ -4,7 +4,7 @@ import { deleteFromCloudinary } from '../utils/cloudinaryHelper.js';
 export const createQuiz = async (req, res) => {
   try {
     const { title, topic, isPublic, numberOfRounds } = req.body;
-    
+
     // Multer-Cloudinary puts the URL in req.file.path
     const bannerUrl = req.file ? req.file.path : "";
 
@@ -40,6 +40,25 @@ export const getAllQuizzes = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const getQuiz = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const quiz = await Quiz.findById(id);
+    if (!quiz) {
+      return res.json({
+        success: false,
+        message: "Quiz not found"
+      })
+    }
+    res.status(200).json(quiz);
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    })
+  }
+}
 
 // @desc    Get quizzes created by the logged-in user
 export const getMyQuizzes = async (req, res) => {
