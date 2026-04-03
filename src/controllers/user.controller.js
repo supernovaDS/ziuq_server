@@ -44,7 +44,7 @@ export const uploadAvatar = async (req, res) => {
 export const updateProfile = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { username, firstName, lastName, email } = req.body;
+        const { username, firstName, lastName } = req.body;
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({
@@ -60,9 +60,6 @@ export const updateProfile = async (req, res) => {
         }
         if (lastName !== undefined) {
             user.lastName = lastName;
-        }
-        if(email !== undefined) {
-            user.email = email;
         }
         await user.save();
         return res.status(200).json({
