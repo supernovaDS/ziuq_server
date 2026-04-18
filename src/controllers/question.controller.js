@@ -1,7 +1,7 @@
 import Question from '../models/Question.js';
 import Round from '../models/Round.js';
 import Quiz from '../models/Quiz.js';
-import { deleteFromCloudinary } from '../utils/cloudinaryHelper.js';
+import { deleteFromCloudinary, uploadToCloudinary } from '../utils/cloudinaryHelper.js';
 
 export const createQuestion = async (req, res) => {
   try {
@@ -10,20 +10,28 @@ export const createQuestion = async (req, res) => {
       correctAnswer, checkingInstruction, maxPoints 
     } = req.body;
 
-    const mediaUrls = req.files ? req.files.map(file => file.path) : [];
-
     const question = await Question.create({
       quizId,
       roundId,
       questionNumber: Number(questionNumber),
       questionText,
-      questionMedia: mediaUrls,
+      questionMedia: [], // Will be uploaded asynchronously
       correctAnswer,
       checkingInstruction: checkingInstruction || undefined, // Fallback to schema default
       maxPoints: Number(maxPoints) || 10
     });
 
     res.status(201).json({ message: "Question added!", question });
+
+    // Handle Background Uploads
+    if (req.files && req.files.length > 0) {
+      Promise.all(req.files.map(file => uploadToCloudinary(file.path, "quiz_questions_media")))
+        .then(async (urls) => {
+          question.questionMedia = urls;
+          await question.save();
+        })
+        .catch(err => console.error("Failed to upload question media:", err));
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -74,18 +82,8 @@ export const updateQuestion = async (req, res) => {
     // ... (Ownership Check via Parent Quiz)
 
     const { questionText, correctAnswer, checkingInstruction, maxPoints } = req.body;
-
-    // 1. Handle Multiple Media Swap
-    if (req.files && req.files.length > 0) {
-      // Delete ALL old files in the array from Cloudinary
-      if (question.questionMedia && question.questionMedia.length > 0) {
-        const deletePromises = question.questionMedia.map(url => deleteFromCloudinary(url));
-        await Promise.all(deletePromises);
-      }
-      
-      // Set the new media URLs
-      question.questionMedia = req.files.map(file => file.path);
-    }
+    const files = req.files;
+    const oldMedia = question.questionMedia;
 
     // 2. Update other fields
     if (questionText) question.questionText = questionText;
@@ -94,7 +92,23 @@ export const updateQuestion = async (req, res) => {
     if (maxPoints) question.maxPoints = Number(maxPoints);
 
     const updatedQuestion = await question.save();
-    res.status(200).json({ message: "Question updated; old media purged", question: updatedQuestion });
+    res.status(200).json({ message: "Question updated!", question: updatedQuestion });
+
+    // 1. Handle Multiple Media Swap Asynchronously
+    if (files && files.length > 0) {
+      Promise.all(files.map(file => uploadToCloudinary(file.path, "quiz_questions_media")))
+        .then(async (urls) => {
+          question.questionMedia = urls;
+          await question.save();
+
+          // Delete all old files in the array from Cloudinary
+          if (oldMedia && oldMedia.length > 0) {
+            const deletePromises = oldMedia.map(url => deleteFromCloudinary(url));
+            await Promise.all(deletePromises);
+          }
+        })
+        .catch(err => console.error("Failed to upload/update question media:", err));
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

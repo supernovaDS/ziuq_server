@@ -1,7 +1,7 @@
 import Round from '../models/Round.js';
 import Quiz from '../models/Quiz.js';
 import Question from '../models/Question.js';
-import { deleteFromCloudinary } from '../utils/cloudinaryHelper.js';
+import { deleteFromCloudinary, uploadToCloudinary } from '../utils/cloudinaryHelper.js';
 
 export const createRound = async (req, res) => {
   try {
@@ -16,12 +16,9 @@ export const createRound = async (req, res) => {
     }
 
     // 2. Handle Media
-    let mediaUrl = "";
     let mediaType = "none";
     
     if (req.file) {
-      mediaUrl = req.file.path;
-      // Determine if it's a video or image based on file extension/mimetype
       mediaType = req.file.mimetype.startsWith('video') ? 'video' : 'image';
     }
 
@@ -30,7 +27,7 @@ export const createRound = async (req, res) => {
       quizId,
       title,
       description,
-      mediaUrl,
+      mediaUrl: "", // Will be uploaded asynchronously
       mediaType,
       numberOfQuestions: Number(numberOfQuestions),
       pointsCorrect: Number(pointsCorrect),
@@ -39,7 +36,17 @@ export const createRound = async (req, res) => {
       timeLimit: Number(timeLimit)
     });
 
-    res.status(201).json({ message: "Round added successfully", round });
+    res.status(201).json({ message: "Round added!", round });
+
+    // 4. Handle Upload Asynchronously
+    if (req.file) {
+      uploadToCloudinary(req.file.path, "quiz_rounds_media")
+        .then(async (url) => {
+          round.mediaUrl = url;
+          await round.save();
+        })
+        .catch(err => console.error("Failed to upload round media:", err));
+    }
   } catch (error) {
     if (error.code === 11000) {
       return res.status(400).json({ message: "Round number already exists for this quiz" });
@@ -66,21 +73,30 @@ export const updateRound = async (req, res) => {
     // ... (Ownership Check)
 
     // Check if a new file is being uploaded
-    if (req.file) {
-      // 1. Delete the OLD media from Cloudinary if it exists
-      if (round.mediaUrl) {
-        await deleteFromCloudinary(round.mediaUrl);
-      }
-      
-      // 2. Set the NEW media details
-      round.mediaUrl = req.file.path;
-      round.mediaType = req.file.mimetype.startsWith('video') ? 'video' : 'image';
+    const file = req.file;
+    const oldMediaUrl = round.mediaUrl;
+    if (file) {
+      // 2. Set the NEW media details immediately but wait for url
+      round.mediaType = file.mimetype.startsWith('video') ? 'video' : 'image';
     }
 
     // ... (Update other text fields like title, description, etc.)
 
     const updatedRound = await round.save();
-    res.status(200).json({ message: "Round updated and old media cleared!", round: updatedRound });
+    res.status(200).json({ message: "Round updated!", round: updatedRound });
+
+    // Handle File Update Asynchronously
+    if (file) {
+      uploadToCloudinary(file.path, "quiz_rounds_media")
+        .then(async (url) => {
+          round.mediaUrl = url;
+          await round.save();
+          if (oldMediaUrl) {
+           await deleteFromCloudinary(oldMediaUrl);
+          }
+        })
+        .catch(err => console.error("Failed to upload/update round media:", err));
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

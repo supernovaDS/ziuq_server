@@ -1,4 +1,30 @@
 import { v2 as cloudinary } from 'cloudinary';
+import fs from 'fs';
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+export const uploadToCloudinary = async (localFilePath, folderName) => {
+  try {
+    const result = await cloudinary.uploader.upload(localFilePath, {
+      folder: folderName,
+      resource_type: "auto",
+    });
+    // Remove the file from local storage after successful upload
+    fs.unlink(localFilePath, (err) => {
+      if (err) console.error("Error deleting local file:", err);
+    });
+    return result.secure_url;
+  } catch (error) {
+    console.error("Cloudinary Upload Error:", error.message);
+    // Even if it fails, delete the local file
+    fs.unlink(localFilePath, () => {});
+    throw error;
+  }
+};
 
 /**
  * Extracts the public_id from a Cloudinary URL and deletes the asset.
@@ -25,4 +51,4 @@ export const deleteFromCloudinary = async (fileUrl) => {
   } catch (error) {
     console.error("Cloudinary Deletion Error:", error.message);
   }
-};
+};

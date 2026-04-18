@@ -1,26 +1,33 @@
 import Quiz from '../models/Quiz.js';
-import { deleteFromCloudinary } from '../utils/cloudinaryHelper.js';
+import { deleteFromCloudinary, uploadToCloudinary } from '../utils/cloudinaryHelper.js';
 
 export const createQuiz = async (req, res) => {
   try {
     const { title, topic, isPublic, numberOfRounds } = req.body;
 
-    // Multer-Cloudinary puts the URL in req.file.path
-    const bannerUrl = req.file ? req.file.path : "";
-
     const newQuiz = await Quiz.create({
       title,
       topic,
-      bannerUrl,
-      isPublic: isPublic === 'true' || isPublic === true, // Handle form-data strings
+      bannerUrl: "", // Cloudinary URL will be updated asynchronously
+      isPublic: isPublic === 'true' || isPublic === true,
       numberOfRounds: Number(numberOfRounds),
-      createdBy: req.user._id // Taken from the 'protect' middleware
+      createdBy: req.user._id
     });
 
     res.status(201).json({
       message: "Quiz created successfully!",
       quiz: newQuiz
     });
+
+    // Hand off upload to background process
+    if (req.file) {
+      uploadToCloudinary(req.file.path, "quiz_banners")
+        .then(async (url) => {
+          newQuiz.bannerUrl = url;
+          await newQuiz.save();
+        })
+        .catch(err => console.error("Failed to upload quiz banner:", err));
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -84,15 +91,6 @@ export const updateQuiz = async (req, res) => {
 
     const { title, description, topic, isPublic } = req.body;
 
-    // 1. Handle Banner Swap
-    if (req.file) {
-      // Delete the old banner if it exists
-      if (quiz.bannerUrl) {
-        await deleteFromCloudinary(quiz.bannerUrl);
-      }
-      quiz.bannerUrl = req.file.path;
-    }
-
     // 2. Update text fields
     if (title) quiz.title = title;
     if (description) quiz.description = description;
@@ -100,7 +98,21 @@ export const updateQuiz = async (req, res) => {
     if (isPublic !== undefined) quiz.isPublic = isPublic === 'true';
 
     const updatedQuiz = await quiz.save();
-    res.status(200).json({ message: "Quiz updated and old banner removed", quiz: updatedQuiz });
+    res.status(200).json({ message: "Quiz updated successfully", quiz: updatedQuiz });
+
+    // 1. Handle Banner Swap Asynchronously
+    if (req.file) {
+      const oldBannerUrl = quiz.bannerUrl;
+      uploadToCloudinary(req.file.path, "quiz_banners")
+        .then(async (url) => {
+          quiz.bannerUrl = url;
+          await quiz.save();
+          if (oldBannerUrl) {
+            await deleteFromCloudinary(oldBannerUrl);
+          }
+        })
+        .catch(err => console.error("Failed to upload/update quiz banner:", err));
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

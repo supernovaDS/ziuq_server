@@ -163,6 +163,7 @@ export const googleAuth = async (req, res) => {
     res.json({ success: true });
 
   } catch (err) {
-    res.status(401).json({ message: "Google auth failed" });
+    console.error("Google Auth Verification Error:", err);
+    res.status(401).json({ message: "Google auth failed", error: err.message });
   }
 };
